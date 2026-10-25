@@ -11,9 +11,8 @@ from vehicle import CAR_STATE, Vehicle
 class EVENT_PRIORITY(IntEnum):
     ARRIVE_AT_BASE = 0
     FINISH_JOB = 1
-    ARRIVE_JOB = 2 # leaving to another job
-    START_DRIVING = 3
-    CALL = 4
+    ARRIVE_JOB = 2
+    CALL = 3
 
 
 def Distance(pos1, pos2):
@@ -22,33 +21,47 @@ def Distance(pos1, pos2):
 
 def PickBestCar (job, vehicles):
     # Takes a job and a list of vehicles.
-    # Returns the vehicle that can reach the job soonest, and the time it can start moving towards the job.
+    # Returns the vehicle that can reach the job soonest, and when it would arrive.
     bestCar = None
-    bestStart = None
     bestArrival = None
     for car in vehicles:
-        start = max(job.arrivalTime, car.busy_until) # can't leave before the call, or before its current job is done
-        arrival = start + Distance(car.get_position(job.arrivalTime), job.position)
+        if car.is_busy():
+            # sets off once its last lined-up job is done, from where that job is
+            start = car.busy_until
+            startPos = (car.last_x, car.last_y)
+        else:
+            # free (at base or driving home): sets off now, from where it is now
+            start = job.arrivalTime
+            startPos = car.get_position(job.arrivalTime)
+        arrival = start + Distance(startPos, job.position)
         if bestCar == None or arrival < bestArrival: # strict <, so ties go to the lowest id
             bestCar = car
-            bestStart = start
             bestArrival = arrival
-    return bestCar, bestStart
+    return bestCar, bestArrival
 
 
 counter = itertools.count() # next(counter) gives 0, 1, 2 ... so no two events tie in the queue
 
-def ProcessJobForCar (job, car : Vehicle, time_car_can_start_job, timeline):
-    # Check car queue size
-    # if 0, add events to timeline
-    # if not 0, add event and info to car queue
-    if car.get_queued_jobs_length() == 0:
-        heapq.heappush(timeline, (time_car_can_start_job, EVENT_PRIORITY.START_DRIVING, next(counter), car, job))
-        arrivalTime = time_car_can_start_job + Distance(car.get_position(time_car_can_start_job), job.position)
-        heapq.heappush(timeline, (arrivalTime, EVENT_PRIORITY.ARRIVE_JOB, next(counter), car, job))
-        car.busy_until = arrivalTime + job.completionTime
+def ProcessJobForCar (job, car : Vehicle, arrivalTime, timeline):
+    # Busy car: line the job up, it drives there straight after its current job
+    # Free car: it sets off now
+    if car.is_busy():
+        car.queued_jobs.append(job)
     else:
-        pass #TODO:
+        StartDriving(car, job, job.arrivalTime, timeline)
+    # When and where this car will be free next
+    car.busy_until = arrivalTime + job.completionTime
+    car.last_x, car.last_y = job.position
+
+def StartDriving (car : Vehicle, job, time, timeline):
+    # Car sets off for the job now: print its route and schedule its arrival
+    startPos = car.get_position(time)
+    car.state = CAR_STATE.TO_JOB
+    print(f"Vehicle {car.vehicle_id}: {format_time(time)} Start route to job")
+    driving_instructions = format_driving_instruction(startPos[0], startPos[1], job.position[0], job.position[1])
+    print(f"Vehicle {car.vehicle_id}: {format_time(time)} {driving_instructions}")
+    arrivalTime = time + Distance(startPos, job.position)
+    heapq.heappush(timeline, (arrivalTime, EVENT_PRIORITY.ARRIVE_JOB, next(counter), car, job))
 
 def main():
     #Parse input from stdin, e.g. python3 main.py < tests/01_brief_sample.txt
@@ -71,17 +84,8 @@ def main():
         car_id = car.vehicle_id if car else None # calls have no car yet
         match event_priority:
             case EVENT_PRIORITY.CALL:
-                car_for_job, time_car_can_start_job = PickBestCar(job, cars)
-                ProcessJobForCar(job, car_for_job, time_car_can_start_job, timeline)
-
-
-            case EVENT_PRIORITY.START_DRIVING:
-                car.state = CAR_STATE.TO_JOB
-                print(f"Vehicle {car_id}: {time_24h} Start route to job")
-                car_pos = car.get_position(time)
-                driving_instructions = format_driving_instruction(car_pos[0], car_pos[1], job.position[0], job.position[1])
-                print(f"Vehicle {car_id}: {time_24h} {driving_instructions}")
-
+                car_for_job, arrivalTime = PickBestCar(job, cars)
+                ProcessJobForCar(job, car_for_job, arrivalTime, timeline)
 
             case EVENT_PRIORITY.ARRIVE_JOB:
                 print(f"Vehicle {car_id}: {time_24h} Start job")
@@ -105,8 +109,8 @@ def main():
                         homeTime = time + Distance(job.position, (BASE_X, BASE_Y))
                         heapq.heappush(timeline, (homeTime, EVENT_PRIORITY.ARRIVE_AT_BASE, next(counter), car, job))
                 else:
-                    pass
-                    # dequeue
+                    # chaining: drive straight to the next lined-up job, no trip home
+                    StartDriving(car, car.dequeue_job(), time, timeline)
 
             case EVENT_PRIORITY.ARRIVE_AT_BASE:
                 print(f"Vehicle {car_id}: {time_24h} Arrive at base")
