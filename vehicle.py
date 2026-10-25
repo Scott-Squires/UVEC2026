@@ -7,20 +7,15 @@ from job import BASE_X, BASE_Y, Job
 
 class CAR_STATE(Enum):
     AT_BASE = 1
-    START_JOB = 2
+    ON_JOB = 2
     TO_JOB = 3 # leaving to another job
     TO_BASE = 4
 
 class Vehicle:
     """One emergency vehicle and the jobs lined up for it."""
 
-    def __init__(self, id) -> None:
-        self.vehicle_id =  id
-        self.nextAvailableTime = 0
-        self.nextAvailablePosition = (0,0)
-        self.timeLeavingToBase = 0
-        self.lastJobPosition = (0,0)
-
+    def __init__(self, vehicle_id: int) -> None:
+        self.vehicle_id = vehicle_id
         self.state = CAR_STATE.AT_BASE
 
         # Last place the vehicle stood still (a finished job, or base)
@@ -44,37 +39,37 @@ class Vehicle:
         # Goes up on every new drive; used to skip stale ARRIVE_BASE events
         self.trip = 0
 
-    def dequeue_job(self):
+    def dequeue_job(self) -> Job:
         return self.queued_jobs.popleft()
-
-    def enqueue_job(self, job):
-        self.queued_jobs.append(job)
 
     def is_busy(self) -> bool:
         """Return True while driving to or working on a job."""
         return self.state in (CAR_STATE.TO_JOB, CAR_STATE.ON_JOB)
 
-    def get_position (self, time):
-        #local helper function
-        def sign (num):
-                if num == 0:
-                    return 0
-                elif num > 0:
-                    return 1
-                else:
-                    return -1
+    def get_position(self, time: int) -> tuple[int, int]:
+        """Return the vehicle's coordinates at the given time.
 
-            
-        if self.state == CAR_STATE.TO_BASE:
-            distanceTravelled = time - self.timeLeavingToBase
-            if distanceTravelled <= abs(self.lastJobPosition[1]): #Still traveling north/south
-                return (self.lastJobPosition[0], sign(self.lastJobPosition[1]) * abs(self.lastJobPosition[1])-distanceTravelled)
-            elif distanceTravelled <= abs(self.lastJobPosition[0]) + abs(self.lastJobPosition[1]): #Travelling west/east
-                return (sign(self.lastJobPosition[0])*(abs(self.lastJobPosition[0])-distanceTravelled+abs(self.lastJobPosition[1])), 0)
-            else:
-                return (0,0)
-        else:
-            return self.lastJobPosition
+        The vehicle only moves between fixed points while driving home.
+        It drives the north/south leg first, then east/west, matching
+        format_driving_instruction.
+        """
+        if self.state != CAR_STATE.TO_BASE:
+            return (self.x_coord, self.y_coord)
+
+        minutes_driven = time - self.left_at
+        x = self.x_coord
+        y = self.y_coord
+
+        # North/south leg
+        step = min(minutes_driven, abs(BASE_Y - y))
+        y += step if BASE_Y > y else -step
+        minutes_driven -= step
+
+        # East/west leg
+        step = min(minutes_driven, abs(BASE_X - x))
+        x += step if BASE_X > x else -step
+
+        return (x, y)
 
     def get_queued_jobs_length (self):
         return len(self.queued_jobs)

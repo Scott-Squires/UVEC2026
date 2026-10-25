@@ -14,8 +14,8 @@ class Job:
     def __init__ (self, arrivalTime: int, xCoord: int, yCoord: int, completionTime: int):
         self.arrivalTime = arrivalTime
         self.position = (xCoord, yCoord)
-        self.xCoord = xCoord
-        self.yCoord = yCoord
+        # self.xCoord = xCoord
+        # self.yCoord = yCoord
         self.completionTime = completionTime
 
     def __lt__(self, other: "Job") -> bool:
@@ -40,3 +40,27 @@ def format_time(minutes: int) -> str:
         clock += f" (+{days}d)"
 
     return clock
+
+
+def format_driving_instruction(
+    from_x: int, from_y: int, to_x: int, to_y: int
+) -> str | None:
+    """Generate a driving instruction between two coordinates. None if there's nowhere to drive."""
+    dx = to_x - from_x
+    dy = to_y - from_y
+    parts = []
+
+    if dy > 0:
+        parts.append(f"{dy} minutes north")
+    elif dy < 0:
+        parts.append(f"{-dy} minutes south")
+
+    if dx > 0:
+        parts.append(f"{dx} minutes east")
+    elif dx < 0:
+        parts.append(f"{-dx} minutes west")
+
+    if not parts:
+        return None
+
+    return "Drive " + " and ".join(parts)
