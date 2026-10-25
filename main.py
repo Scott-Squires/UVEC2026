@@ -12,14 +12,36 @@ class EVENT_PRIORITY(IntEnum):
     START_DRIVING = 3
     CALL = 4
 
+def format_driving_instruction(
+    from_x: int, from_y: int, to_x: int, to_y: int
+) -> str:
+    """Generate a driving instruction between two coordinates."""
+    dx = to_x - from_x
+    dy = to_y - from_y
+    parts = []
+
+    if dy > 0:
+        parts.append(f"{dy} minutes north")
+    elif dy < 0:
+        parts.append(f"{-dy} minutes south")
+
+    if dx > 0:
+        parts.append(f"{dx} minutes east")
+    elif dx < 0:
+        parts.append(f"{-dx} minutes west")
+
+    if not parts:
+        return "Already at destination"
+
+    return "Drive " + " and ".join(parts)
 
 def Distance(pos1, pos2):
     # Manhatten distance between two points
-    abs(pos1[0] - pos2[0] + pos1[1] - pos2[1])
+    return abs(pos1[0] - pos2[0] + pos1[1] - pos2[1])
 
 def PickBestCar (job, vehicles):
     # Takes a job and a list of vehicles. 
-    # Returns the best vehicle for the job and the time it can start moving towards the job.
+    # Returns the best vehicle for the job and the time it can start moving towards the job in minutes from now.
     bestCar = None
     bestTime = None
     for car in vehicles:
@@ -36,20 +58,21 @@ def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline):
     # Check car queue size
     # if 0, add events to timeline
     # if not 0, add event and info to car queue
+    car.lastAvailablePosition = job.position
+    car.nextAvailableTime = time_car_can_start_job + Distance(car.lastAvailablePosition, job.position) + job.completionTime
     if car.get_queued_jobs_length() == 0:
-        heapq.heappush(timeline, (time_car_can_start_job, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
-        global_counter += 1
-        arrivalTime = time_car_can_start_job #+ ...
-        heapq.heappush(timeline, (arrivalTime, EVENT_PRIORITY.ARRIVE_JOB, global_counter, car, job))
+        car.enqueue_job(job)
+        add_car_event_to_timeline(car, timeline, time_car_can_start_job)
     else:
-        pass #TODO:
+        car.enqueue_job(job)
 
 def main():
+    global global_counter
     #Parse input
-    dayParams = parse_test("tests/test1.txt")
+    dayParams = parse_test("./tests/01_brief_sample.txt")
 
     #list of cars
-    cars = [vehicle() for _ in range(dayParams.numVehicles)]
+    cars = [vehicle.Vehicle(i) for i in range(dayParams.numVehicles)]
 
     # timeline touple format
     # (time, priority, seq, car_id|(none for call), job_id)
@@ -60,55 +83,62 @@ def main():
         heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.CALL, global_counter, None, job))
         global_counter += 1
 
-    while timeline.size() != 0:
+    while len(timeline) != 0:
         time, event_priority, _, car, job = heapq.heappop(timeline)
-        time_24h = minutes_to_24h_string(time);
-        car_id = car.vehicle_id
+        time_24h = minutes_to_24h_string(time)
         match event_priority:
             case EVENT_PRIORITY.CALL:
                 car_for_job, time_car_can_start_job = PickBestCar(job, cars)
-                ProcessJobForCar(job, car_for_job, time_car_can_start_job, timeline)
-
+                ProcessJobForCar(job, car_for_job, time_car_can_start_job + time, timeline)
 
             case EVENT_PRIORITY.START_DRIVING:
-                print(f"Vehicle {car_id}: {time_24h} Start route to job")
+                print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to job")
                 car_pos = car.get_position(time)
                 driving_instructions = format_driving_instruction(car_pos[0], car_pos[1], job.position[0], job.position[1])
-                print(f"Vehicle {car_id}: {time_24h} {driving_instructions}")
+                print(f"Vehicle {car.vehicle_id}: {time_24h} {driving_instructions}")
 
 
             case EVENT_PRIORITY.ARRIVE_JOB:
-                print(f"Vehicle {car_id}: {time_24h} Start job")
+                print(f"Vehicle {car.vehicle_id}: {time_24h} Start job")
+                car.state = vehicle.CAR_STATE.START_JOB
 
             case EVENT_PRIORITY.FINISH_JOB:
-                print(f"Vehicle {car_id}: {time_24h} Finish job")
+                print(f"Vehicle {car.vehicle_id}: {time_24h} Finish job")
                 # Call function that checks car queue,
                 # if nothing
-                if car.get_queued_job_length() == 0:
-                    print(f"Vehicle {car_id}: {time_24h} Start route to base")
-                    # TODO: enqueue in timeline the arrive at base event
+                if car.get_queued_jobs_length() == 0:
+                    print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to base")
+                    car.state = vehicle.CAR_STATE.TO_BASE
+                    baseArrivalTime = time + Distance(car.get_position(time), (0,0))
+                    heapq.heappush(timeline, (baseArrivalTime, EVENT_PRIORITY.ARRIVE_AT_BASE, global_counter, car, job))
+                    global_counter += 1
                 else:
-                    pass
-                    # dequeue
-
-
-
+                    add_car_event_to_timeline(car, timeline, time)
 
             case EVENT_PRIORITY.ARRIVE_AT_BASE:
-                print(f"Vehicle {car_id}: {time_24h} Arrive at base")
+                print(f"Vehicle {car.vehicle_id}: {time_24h} Arrive at base")
+                car.state = vehicle.CAR_STATE.AT_BASE
 
 
 
 
-def add_car_event_to_timeline(car, timeline):
+def add_car_event_to_timeline(car, timeline, time):
+    global global_counter
     job = car.dequeue_job()
+    car.state = vehicle.CAR_STATE.TO_JOB
 
-    heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
+    heapq.heappush(timeline, (time, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
     global_counter += 1
 
-    heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
+    time_arrive_at_job_site = time + Distance(car.get_position(time), job.position) #is car position good here?
+    heapq.heappush(timeline, (time_arrive_at_job_site, EVENT_PRIORITY.ARRIVE_JOB, global_counter, car, job))
     global_counter += 1
 
+    time_finish_job = time_arrive_at_job_site + job.completionTime
+    heapq.heappush(timeline, (time_finish_job, EVENT_PRIORITY.FINISH_JOB, global_counter, car, job))
+    global_counter += 1
+
+    car.lastJobPosition = job.position
     # takes a queue of jobs
     # list of vehicles
     # outputs: which vehicle # should go to the
@@ -126,5 +156,5 @@ def minutes_to_24h_string(minutes: int) -> str:
     return f"{hours:02d}:{mins:02d}"
 
 
-# if __main__:
-#     main()
+if __name__ == "__main__":
+    main()
