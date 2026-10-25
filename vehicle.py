@@ -13,9 +13,11 @@ class CAR_STATE(Enum):
 
 class Vehicle:
     """One emergency vehicle and the jobs lined up for it."""
+    counter:int = 0
 
-    def __init__(self, vehicle_id: int) -> None:
-        self.vehicle_id = vehicle_id
+    def __init__(self) -> None:
+        self.vehicle_id =  counter
+        counter += 1
         self.state = CAR_STATE.AT_BASE
 
         # Last place the vehicle stood still (a finished job, or base)
@@ -38,6 +40,9 @@ class Vehicle:
 
         # Goes up on every new drive; used to skip stale ARRIVE_BASE events
         self.trip = 0
+
+    def dequeue_job(self) -> job:
+        job = self.queued_jobs.popleft()
 
     def is_busy(self) -> bool:
         """Return True while driving to or working on a job."""

@@ -13,8 +13,9 @@ class Job:
 
     def __init__ (self, arrivalTime: int, xCoord: int, yCoord: int, completionTime: int):
         self.arrivalTime = arrivalTime
-        self.xCoord = xCoord
-        self.yCoord = yCoord
+        self.position = (xCoord, yCoord)
+        # self.xCoord = xCoord
+        # self.yCoord = yCoord
         self.completionTime = completionTime
 
     def __lt__(self, other: "Job") -> bool:
