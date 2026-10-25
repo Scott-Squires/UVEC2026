@@ -1,5 +1,9 @@
 from dataclasses import dataclass
 
+BASE_X = 0
+BASE_Y = 0
+MINUTES_PER_DAY = 24 * 60
+
 @dataclass
 class Job:
     arrivalTime: int #kept as minutes since the start of the day (midnight)
@@ -15,4 +19,47 @@ class Job:
 
     def __lt__(self, other: "Job") -> bool:
         return self.arrivalTime < other.arrivalTime
- 
+
+#travel time between two points = blocks north/south + blocks east/west (1 block = 1 minute)
+def calculate_travel_time(
+    x1: int, y1: int, x2: int, y2: int
+) -> int:
+    """Calculate Manhattan travel time in minutes."""
+    return abs(x1 - x2) + abs(y1 - y2)
+
+
+def format_time(minutes: int) -> str:
+    """Format elapsed minutes as a clock time."""
+    days = minutes // MINUTES_PER_DAY
+    minutes = minutes % MINUTES_PER_DAY
+
+    clock = f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+    if days > 0:
+        clock += f" (+{days}d)"
+
+    return clock
+
+
+def format_driving_instruction(
+    from_x: int, from_y: int, to_x: int, to_y: int
+) -> str:
+    """Generate a driving instruction between two coordinates."""
+    dx = to_x - from_x
+    dy = to_y - from_y
+    parts = []
+
+    if dy > 0:
+        parts.append(f"{dy} minutes north")
+    elif dy < 0:
+        parts.append(f"{-dy} minutes south")
+
+    if dx > 0:
+        parts.append(f"{dx} minutes east")
+    elif dx < 0:
+        parts.append(f"{-dx} minutes west")
+
+    if not parts:
+        return "Already at destination"
+
+    return "Drive " + " and ".join(parts)
