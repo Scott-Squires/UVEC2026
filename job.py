@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 @dataclass
-class job:
+class Job:
     arrivalTime: int #kept as minutes since the start of the day (midnight)
     xCoord: int #west is negative, east is positive
     yCoord: int #south is negative, north is positive
