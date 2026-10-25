@@ -11,7 +11,7 @@ def PickBestCar (job, vehicles):
     bestCar = None
     bestTime = None
     for car in vehicles:
-        carTime = (0 if job.arrivalTime > car.nextAvailableTime else car.nextAvailableTime - job.arrivalTime) + Distance(car.getPosition(job.arrivalTime), job.position)
+        carTime = (0 if job.arrivalTime > car.nextAvailableTime else car.nextAvailableTime - job.arrivalTime) + Distance(car.get_position(job.arrivalTime), job.position)
         if bestCar == None or carTime < bestTime:
             bestCar = car
             bestTime = carTime
