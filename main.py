@@ -37,32 +37,34 @@ def format_driving_instruction(
 
 def Distance(pos1, pos2):
     # Manhatten distance between two points
-    return abs(pos1[0] - pos2[0] + pos1[1] - pos2[1])
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 def PickBestCar (job, vehicles):
     # Takes a job and a list of vehicles. 
     # Returns the best vehicle for the job and the time it can start moving towards the job in minutes from now.
     bestCar = None
     bestTime = None
+    bestCarAvailableTime = None
     for car in vehicles:
         carTime = (0 if job.arrivalTime > car.nextAvailableTime else car.nextAvailableTime - job.arrivalTime) + Distance(car.get_position(job.arrivalTime), job.position)
         if bestCar == None or carTime < bestTime:
             bestCar = car
             bestTime = carTime
-    return bestCar, bestTime
+            bestCarAvailableTime = max(car.nextAvailableTime, job.arrivalTime)
+    return bestCar, bestTime, bestCarAvailableTime
 
 
 global_counter: int = 0 # Ensures no ties when removing from the queue.
 
-def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline):
+def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline, car_available_time):
     # Check car queue size
     # if 0, add events to timeline
     # if not 0, add event and info to car queue
     car.lastAvailablePosition = job.position
-    car.nextAvailableTime = time_car_can_start_job + Distance(car.lastAvailablePosition, job.position) + job.completionTime
+    car.nextAvailableTime = time_car_can_start_job + job.completionTime
     if car.get_queued_jobs_length() == 0:
         car.enqueue_job(job)
-        add_car_event_to_timeline(car, timeline, time_car_can_start_job)
+        add_car_event_to_timeline(car, timeline, car_available_time)
     else:
         car.enqueue_job(job)
 
@@ -88,14 +90,15 @@ def main():
         time_24h = minutes_to_24h_string(time)
         match event_priority:
             case EVENT_PRIORITY.CALL:
-                car_for_job, time_car_can_start_job = PickBestCar(job, cars)
-                ProcessJobForCar(job, car_for_job, time_car_can_start_job + time, timeline)
+                car_for_job, time_car_can_start_job, car_available_time = PickBestCar(job, cars)
+                ProcessJobForCar(job, car_for_job, time_car_can_start_job + time, timeline, car_available_time)
 
             case EVENT_PRIORITY.START_DRIVING:
                 print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to job")
                 car_pos = car.get_position(time)
                 driving_instructions = format_driving_instruction(car_pos[0], car_pos[1], job.position[0], job.position[1])
                 print(f"Vehicle {car.vehicle_id}: {time_24h} {driving_instructions}")
+                car.lastJobPosition = job.position
 
 
             case EVENT_PRIORITY.ARRIVE_JOB:
@@ -109,7 +112,8 @@ def main():
                 if car.get_queued_jobs_length() == 0:
                     print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to base")
                     car.state = vehicle.CAR_STATE.TO_BASE
-                    baseArrivalTime = time + Distance(car.get_position(time), (0,0))
+                    baseArrivalTime = time + Distance(car.lastJobPosition, (0,0))
+                    heapq.heappush(timeline, (time, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
                     heapq.heappush(timeline, (baseArrivalTime, EVENT_PRIORITY.ARRIVE_AT_BASE, global_counter, car, job))
                     global_counter += 1
                 else:
@@ -118,6 +122,7 @@ def main():
             case EVENT_PRIORITY.ARRIVE_AT_BASE:
                 print(f"Vehicle {car.vehicle_id}: {time_24h} Arrive at base")
                 car.state = vehicle.CAR_STATE.AT_BASE
+                car.lastJobPosition = (0,0)
 
 
 
@@ -138,7 +143,6 @@ def add_car_event_to_timeline(car, timeline, time):
     heapq.heappush(timeline, (time_finish_job, EVENT_PRIORITY.FINISH_JOB, global_counter, car, job))
     global_counter += 1
 
-    car.lastJobPosition = job.position
     # takes a queue of jobs
     # list of vehicles
     # outputs: which vehicle # should go to the
