@@ -71,7 +71,7 @@ def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline, car_
 def main():
     global global_counter
     #Parse input
-    dayParams = parse_test("./tests/01_brief_sample.txt")
+    dayParams = parse_test("./tests/04_redirect_home.txt")
 
     #list of cars
     cars = [vehicle.Vehicle(i) for i in range(dayParams.numVehicles)]
@@ -96,6 +96,7 @@ def main():
             case EVENT_PRIORITY.START_DRIVING:
                 print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to job")
                 car_pos = car.get_position(time)
+                print(car_pos)
                 driving_instructions = format_driving_instruction(car_pos[0], car_pos[1], job.position[0], job.position[1])
                 print(f"Vehicle {car.vehicle_id}: {time_24h} {driving_instructions}")
                 car.lastJobPosition = job.position
@@ -112,14 +113,19 @@ def main():
                 if car.get_queued_jobs_length() == 0:
                     print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to base")
                     car.state = vehicle.CAR_STATE.TO_BASE
+                    car.timeLeavingToBase = time
                     baseArrivalTime = time + Distance(car.lastJobPosition, (0,0))
-                    heapq.heappush(timeline, (time, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
+                    car_pos = car.lastJobPosition
+                    driving_instructions = format_driving_instruction(car_pos[0], car_pos[1], 0, 0)
+                    print(f"Vehicle {car.vehicle_id}: {time_24h} {driving_instructions}")
                     heapq.heappush(timeline, (baseArrivalTime, EVENT_PRIORITY.ARRIVE_AT_BASE, global_counter, car, job))
                     global_counter += 1
                 else:
                     add_car_event_to_timeline(car, timeline, time)
 
             case EVENT_PRIORITY.ARRIVE_AT_BASE:
+                if car.currentJobID != job.id:
+                    continue
                 print(f"Vehicle {car.vehicle_id}: {time_24h} Arrive at base")
                 car.state = vehicle.CAR_STATE.AT_BASE
                 car.lastJobPosition = (0,0)
@@ -131,6 +137,7 @@ def add_car_event_to_timeline(car, timeline, time):
     global global_counter
     job = car.dequeue_job()
     car.state = vehicle.CAR_STATE.TO_JOB
+    car.currentJobID = job.id
 
     heapq.heappush(timeline, (time, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
     global_counter += 1

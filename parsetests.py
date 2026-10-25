@@ -12,6 +12,7 @@ def parse_test(testFilename: str) -> day_params:
     params = day_params(jobs=[], numVehicles=0)
 
     with open(testFilename, "r") as file:
+        counter = 0
         #read first line as the number of vehicles and remove it
         params.numVehicles = int(next(file).strip())
 
@@ -44,6 +45,8 @@ def parse_test(testFilename: str) -> day_params:
 
             currJob.completionTime = int(lineSegments[i])
             currJob.position = (currJob.xCoord, currJob.yCoord)
+            currJob.id = counter
+            counter += 1
             params.jobs.append(currJob)
             params.jobs.sort()
                 

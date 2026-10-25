@@ -20,6 +20,7 @@ class Vehicle:
         self.nextAvailablePosition = (0,0)
         self.timeLeavingToBase = 0
         self.lastJobPosition = (0,0)
+        self.currentJobID = -1
 
         self.state = CAR_STATE.AT_BASE
 
@@ -66,11 +67,18 @@ class Vehicle:
 
             
         if self.state == CAR_STATE.TO_BASE:
+            print (f"leaving to base time: {self.timeLeavingToBase}")
             distanceTravelled = time - self.timeLeavingToBase
+            print(f"distance travelled: {distanceTravelled}")
             if distanceTravelled <= abs(self.lastJobPosition[1]): #Still traveling north/south
-                return (self.lastJobPosition[0], sign(self.lastJobPosition[1]) * abs(self.lastJobPosition[1])-distanceTravelled)
+                return (self.lastJobPosition[0], sign(self.lastJobPosition[1])
+                         * (abs(self.lastJobPosition[1])-distanceTravelled))
             elif distanceTravelled <= abs(self.lastJobPosition[0]) + abs(self.lastJobPosition[1]): #Travelling west/east
-                return (sign(self.lastJobPosition[0])*(abs(self.lastJobPosition[0])-distanceTravelled+abs(self.lastJobPosition[1])), 0)
+                print(f"sign of last job[0] (assume +){sign(self.lastJobPosition[0])},\nvalue of x coord (assume 4){(abs(self.lastJobPosition[0])-distanceTravelled+abs(self.lastJobPosition[1]))}")
+                print(f"We return: {(sign(self.lastJobPosition[0])
+                        *(abs(self.lastJobPosition[0])-distanceTravelled+abs(self.lastJobPosition[1])), 0)}")
+                return (sign(self.lastJobPosition[0])
+                        *(abs(self.lastJobPosition[0])-distanceTravelled+abs(self.lastJobPosition[1])), 0)
             else:
                 return (0,0)
         else:
