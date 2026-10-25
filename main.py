@@ -1,7 +1,23 @@
 import vehicle
 import job
+import heapq # only for single threaded
+from enum import Enum
+
+class CAR_STATE(Enum):
+    AT_BASE = 1
+    START_JOB = 2
+    TO_JOB = 3 # leaving to another job
+    TO_BASE = 4
+
+class EVENT_PRIORITY(Enum):
+    ARRIVE_AT_BASE = 0
+    FINISH_JOB = 1
+    ARRIVE_JOB = 2 # leaving to another job
+    CALL = 3
+
 
 def Distance(pos1, pos2):
+
     # Manhatten distance between two points
     abs(pos1[0] - pos2[0] + pos1[1] - pos2[1])
 
@@ -16,3 +32,40 @@ def PickBestCar (job, vehicles):
             bestCar = car
             bestTime = carTime
     return bestCar, bestTime
+
+
+
+
+global_counter: int = 0 # Ensures no ties when removing from the queue.
+
+def main():
+    #queue List of Jobs
+
+    # timeline touple format
+    # (time, priority, seq, car_state, car_id|(none for call), job_id)
+    timeline = []
+
+    while timeline.size() != 0:
+        time, event_priority, _, car_state, car, job = heapq.heappop(timeline)
+        match event_priority:
+
+            case EVENT_PRIORITY.CALL:
+                pass
+                for car in car_list:
+                    pass
+                    # calculate which car to add the event to the queue.
+
+            case _:
+                # CAR event, Print out the correct text string
+                pass
+
+
+def process_next_job():
+    # takes a queue of jobs
+    # list of vehicles
+    # outputs: which vehicle # should go to the
+
+
+
+# if __main__:
+#     main()
