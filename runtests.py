@@ -1,13 +1,13 @@
-from job import job
+from job import Job
 from dataclasses import dataclass
 
 @dataclass
 class day_params:
-    jobs: list[job]
+    jobs: list[Job]
     numVehicles: int
 
 #Returns the dataclass day_params (defined above) for all jobs specified in the input
-#currently returns unsorted and without error checking / tolerance for bad input
+#currently returns without error checking / tolerance for bad input
 def parse_test(testFilename: str) -> day_params:
     params = day_params(jobs=[], numVehicles=0)
 
@@ -17,7 +17,7 @@ def parse_test(testFilename: str) -> day_params:
 
         #make and add a job for each line listed in the test input
         for line in file:
-            currJob = job(arrivalTime=0, xCoord=0, yCoord=0, completionTime=0)
+            currJob = Job(arrivalTime=0, xCoord=0, yCoord=0, completionTime=0)
 
             lineSegments = line.strip().split(' ')
 
@@ -27,7 +27,6 @@ def parse_test(testFilename: str) -> day_params:
 
             i = 1
             while (i + 2 < len(lineSegments)):
-                print(f'working on {lineSegments[i]} and {lineSegments[i+1]}')
                 dist = lineSegments[i]
                 dir = lineSegments[i+1]
 
@@ -45,5 +44,6 @@ def parse_test(testFilename: str) -> day_params:
 
             currJob.completionTime = lineSegments[i]
             params.jobs.append(currJob)
+            params.jobs.sort()
                 
     return params

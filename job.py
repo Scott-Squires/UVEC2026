@@ -12,4 +12,7 @@ class Job:
         self.xCoord = xCoord
         self.yCoord = yCoord
         self.completionTime = completionTime
+
+    def __lt__(self, other: "Job") -> bool:
+        return self.arrivalTime < other.arrivalTime
  
