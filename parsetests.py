@@ -42,7 +42,7 @@ def parse_test(testFilename: str) -> day_params:
 
                 i += 2;
 
-            currJob.completionTime = lineSegments[i]
+            currJob.completionTime = int(lineSegments[i])
             params.jobs.append(currJob)
             params.jobs.sort()
                 
