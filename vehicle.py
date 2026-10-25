@@ -1,22 +1,22 @@
 """Vehicle state and position tracking."""
 
 from collections import deque
+from enum import Enum
 
 from job import BASE_X, BASE_Y, Job
 
-# Possible values for Vehicle.state
-AT_BASE = "AT_BASE"
-TO_JOB = "TO_JOB"
-ON_JOB = "ON_JOB"
-TO_BASE = "TO_BASE"
-
+class CAR_STATE(Enum):
+    AT_BASE = 1
+    START_JOB = 2
+    TO_JOB = 3 # leaving to another job
+    TO_BASE = 4
 
 class Vehicle:
     """One emergency vehicle and the jobs lined up for it."""
 
     def __init__(self, vehicle_id: int) -> None:
         self.vehicle_id = vehicle_id
-        self.state = AT_BASE
+        self.state = CAR_STATE.AT_BASE
 
         # Last place the vehicle stood still (a finished job, or base)
         self.x_coord = BASE_X
@@ -67,6 +67,12 @@ class Vehicle:
         x += step if BASE_X > x else -step
 
         return (x, y)
+
+    def get_queued_jobs_length (self):
+        return len(self.queued_jobs)
+
+    def set_state(self, state):
+        self.state = state
 
     def __repr__(self) -> str:
         return (

@@ -4,17 +4,13 @@ import heapq # only for single threaded
 from enum import Enum
 from parsetests import parse_test
 
-class CAR_STATE(Enum):
-    AT_BASE = 1
-    START_JOB = 2
-    TO_JOB = 3 # leaving to another job
-    TO_BASE = 4
 
 class EVENT_PRIORITY(Enum):
     ARRIVE_AT_BASE = 0
     FINISH_JOB = 1
     ARRIVE_JOB = 2 # leaving to another job
-    CALL = 3
+    START_DRIVING = 3
+    CALL = 4
 
 
 def Distance(pos1, pos2):
@@ -34,14 +30,18 @@ def PickBestCar (job, vehicles):
     return bestCar, bestTime
 
 
-def initializeCars (num):
-    return 
-
-
-def ProcessJobForCar (job, car_for_job, time_car_can_start_job, timeline):
-    None
-
 global_counter: int = 0 # Ensures no ties when removing from the queue.
+
+def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline):
+    # Check car queue size
+    # if 0, add events to timeline
+    # if not 0, add event and info to car queue
+    if car.get_queued_jobs_length() == 0:
+        heapq.heappush(timeline, (time_car_can_start_job, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
+        global_counter += 1
+        arrivalTime = time_car_can_start_job #+ ...
+        heapq.heappush(timeline, (arrivalTime, EVENT_PRIORITY.ARRIVE_JOB, global_counter, car, job))
+    else:
 
 def main():
     #Parse input
@@ -51,12 +51,12 @@ def main():
     cars = [vehicle() for _ in range(dayParams.numVehicles)]
 
     # timeline touple format
-    # (time, priority, seq, car_state|none, car_id|(none for call), job_id)
+    # (time, priority, seq, car_id|(none for call), job_id)
     timeline = []
 
     #queue jobs
     for job in dayParams.jobs:
-        heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.CALL, global_counter, None, None, job))
+        heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.CALL, global_counter, None, job))
         global_counter += 1
 
     while timeline.size() != 0:
