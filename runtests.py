@@ -7,6 +7,7 @@ class day_params:
     numVehicles: int
 
 #Returns the dataclass day_params (defined above) for all jobs specified in the input
+#currently returns unsorted and without error checking / tolerance for bad input
 def parse_test(testFilename: str) -> day_params:
     params = day_params(jobs=[], numVehicles=0)
 
