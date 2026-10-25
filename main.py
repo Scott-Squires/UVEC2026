@@ -1,8 +1,11 @@
-import vehicle
-import job
 import heapq # only for single threaded
+import itertools
+import sys
 from enum import IntEnum
-from parsetests import parse_test
+
+from input_parser import parse_input
+from job import format_time, format_driving_instruction
+from vehicle import Vehicle
 
 
 class EVENT_PRIORITY(IntEnum):
@@ -14,42 +17,45 @@ class EVENT_PRIORITY(IntEnum):
 
 
 def Distance(pos1, pos2):
-    # Manhatten distance between two points
-    abs(pos1[0] - pos2[0] + pos1[1] - pos2[1])
+    # Manhattan distance between two points
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 def PickBestCar (job, vehicles):
-    # Takes a job and a list of vehicles. 
-    # Returns the best vehicle for the job and the time it can start moving towards the job.
+    # Takes a job and a list of vehicles.
+    # Returns the vehicle that can reach the job soonest, and the time it can start moving towards the job.
     bestCar = None
-    bestTime = None
+    bestStart = None
+    bestArrival = None
     for car in vehicles:
-        carTime = (0 if job.arrivalTime > car.nextAvailableTime else car.nextAvailableTime - job.arrivalTime) + Distance(car.get_position(job.arrivalTime), job.position)
-        if bestCar == None or carTime < bestTime:
+        start = max(job.arrivalTime, car.busy_until) # can't leave before the call, or before its current job is done
+        arrival = start + Distance(car.get_position(job.arrivalTime), job.position)
+        if bestCar == None or arrival < bestArrival: # strict <, so ties go to the lowest id
             bestCar = car
-            bestTime = carTime
-    return bestCar, bestTime
+            bestStart = start
+            bestArrival = arrival
+    return bestCar, bestStart
 
 
-global_counter: int = 0 # Ensures no ties when removing from the queue.
+counter = itertools.count() # next(counter) gives 0, 1, 2 ... so no two events tie in the queue
 
-def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline):
+def ProcessJobForCar (job, car : Vehicle, time_car_can_start_job, timeline):
     # Check car queue size
     # if 0, add events to timeline
     # if not 0, add event and info to car queue
     if car.get_queued_jobs_length() == 0:
-        heapq.heappush(timeline, (time_car_can_start_job, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
-        global_counter += 1
-        arrivalTime = time_car_can_start_job #+ ...
-        heapq.heappush(timeline, (arrivalTime, EVENT_PRIORITY.ARRIVE_JOB, global_counter, car, job))
+        heapq.heappush(timeline, (time_car_can_start_job, EVENT_PRIORITY.START_DRIVING, next(counter), car, job))
+        arrivalTime = time_car_can_start_job + Distance(car.get_position(time_car_can_start_job), job.position)
+        heapq.heappush(timeline, (arrivalTime, EVENT_PRIORITY.ARRIVE_JOB, next(counter), car, job))
+        car.busy_until = arrivalTime + job.completionTime
     else:
         pass #TODO:
 
 def main():
-    #Parse input
-    dayParams = parse_test("tests/test1.txt")
+    #Parse input from stdin, e.g. python3 main.py < tests/01_brief_sample.txt
+    dayParams = parse_input(sys.stdin)
 
     #list of cars
-    cars = [vehicle() for _ in range(dayParams.numVehicles)]
+    cars = [Vehicle(i) for i in range(dayParams.numVehicles)]
 
     # timeline touple format
     # (time, priority, seq, car_id|(none for call), job_id)
@@ -57,13 +63,12 @@ def main():
 
     #queue jobs
     for job in dayParams.jobs:
-        heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.CALL, global_counter, None, job))
-        global_counter += 1
+        heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.CALL, next(counter), None, job))
 
-    while timeline.size() != 0:
+    while timeline:
         time, event_priority, _, car, job = heapq.heappop(timeline)
-        time_24h = minutes_to_24h_string(time);
-        car_id = car.vehicle_id
+        time_24h = format_time(time)
+        car_id = car.vehicle_id if car else None # calls have no car yet
         match event_priority:
             case EVENT_PRIORITY.CALL:
                 car_for_job, time_car_can_start_job = PickBestCar(job, cars)
@@ -84,7 +89,7 @@ def main():
                 print(f"Vehicle {car_id}: {time_24h} Finish job")
                 # Call function that checks car queue,
                 # if nothing
-                if car.get_queued_job_length() == 0:
+                if car.get_queued_jobs_length() == 0:
                     print(f"Vehicle {car_id}: {time_24h} Start route to base")
                     # TODO: enqueue in timeline the arrive at base event
                 else:
@@ -100,31 +105,5 @@ def main():
 
 
 
-def add_car_event_to_timeline(car, timeline):
-    job = car.dequeue_job()
-
-    heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
-    global_counter += 1
-
-    heapq.heappush(timeline, (job.arrivalTime, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
-    global_counter += 1
-
-    # takes a queue of jobs
-    # list of vehicles
-    # outputs: which vehicle # should go to the
-    #
-    # ARRIVE_AT_BASE = 0
-    # FINISH_JOB = 1
-    # ARRIVE_JOB = 2 # leaving to another job
-    # START_DRIVING = 3
-    # CALL = 4
-
-def minutes_to_24h_string(minutes: int) -> str:
-    """Converts minutes elapsed since midnight into a 24-hour formatted string (HH:MM)."""
-    hours = (minutes // 60) % 24
-    mins = minutes % 60
-    return f"{hours:02d}:{mins:02d}"
-
-
-# if __main__:
-#     main()
+if __name__ == "__main__":
+    main()

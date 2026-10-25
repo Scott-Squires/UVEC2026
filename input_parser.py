@@ -6,44 +6,44 @@ class day_params:
     jobs: list[Job]
     numVehicles: int
 
-#Returns the dataclass day_params (defined above) for all jobs specified in the input
+#Returns the dataclass day_params (defined above) for all jobs in the input.
+#file is anything you can loop over line by line, e.g. sys.stdin or an open file.
 #currently returns without error checking / tolerance for bad input
-def parse_test(testFilename: str) -> day_params:
+def parse_input(file) -> day_params:
     params = day_params(jobs=[], numVehicles=0)
 
-    with open(testFilename, "r") as file:
-        #read first line as the number of vehicles and remove it
-        params.numVehicles = int(next(file).strip())
+    #read first line as the number of vehicles and remove it
+    params.numVehicles = int(next(file).strip())
 
-        #make and add a job for each line listed in the test input
-        for line in file:
-            currJob = Job(arrivalTime=0, xCoord=0, yCoord=0, completionTime=0)
+    #make and add a job for each line listed in the test input
+    for line in file:
+        lineSegments = line.strip().split(' ')
 
-            lineSegments = line.strip().split(' ')
+        arrivalTimeStamp = lineSegments[0]
+        arrivalTimeStampSplit = arrivalTimeStamp.split(':')
+        arrivalTime = int(arrivalTimeStampSplit[0])*60 + int(arrivalTimeStampSplit[1])
 
-            arrivalTimeStamp = lineSegments[0]
-            arrivalTimeStampSplit = arrivalTimeStamp.split(':')
-            currJob.arrivalTime = int(arrivalTimeStampSplit[0])*60 + int(arrivalTimeStampSplit[1])
+        xCoord = 0
+        yCoord = 0
+        i = 1
+        while (i + 2 < len(lineSegments)):
+            dist = lineSegments[i]
+            dir = lineSegments[i+1]
 
-            i = 1
-            while (i + 2 < len(lineSegments)):
-                dist = lineSegments[i]
-                dir = lineSegments[i+1]
+            match dir:
+                case "W":
+                    xCoord -= int(dist)
+                case "E":
+                    xCoord += int(dist)
+                case "S":
+                    yCoord -= int(dist)
+                case "N":
+                    yCoord += int(dist)
 
-                match dir:
-                    case "W":
-                        currJob.xCoord -= int(dist)
-                    case "E":
-                        currJob.xCoord += int(dist)
-                    case "S":
-                        currJob.yCoord -= int(dist)
-                    case "N":
-                        currJob.yCoord += int(dist)
+            i += 2;
 
-                i += 2;
+        completionTime = int(lineSegments[i])
+        params.jobs.append(Job(arrivalTime, xCoord, yCoord, completionTime))
+        params.jobs.sort()
 
-            currJob.completionTime = int(lineSegments[i])
-            params.jobs.append(currJob)
-            params.jobs.sort()
-                
     return params
