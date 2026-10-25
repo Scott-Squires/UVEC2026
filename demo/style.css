@@ -54,44 +54,7 @@ svg {
 
 .sep { width: 1px; height: 22px; background: var(--line); margin: 0 8px; }
 
-.samples { position: relative; }
-#sample-name {
-  border: 0;
-  background: none;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  min-width: 150px;
-  text-align: left;
-}
-#sample-name::after { content: " ▾"; color: var(--muted); }
-#sample-name:hover { background: var(--sunk); }
-#sample-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  left: -6px;
-  list-style: none;
-  margin: 0;
-  padding: 6px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  min-width: 220px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-#sample-menu button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  background: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-#sample-menu button:hover { background: var(--sunk); }
-#sample-menu button.current { color: var(--accent); }
+#run-name { padding: 0 8px; min-width: 150px; }
 
 #open {
   background: #ebe6df;

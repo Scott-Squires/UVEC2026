@@ -5,7 +5,7 @@ Usage:
     python3 demo/show.py path/to/input.txt other.py     runs a different program
 
 The program's output is printed to the console as normal, and the demo opens
-with this run loaded (it appears first in the sample list as "Run: <file name>").
+with this run loaded (the top bar shows "Run: <file name>").
 """
 
 import json
@@ -33,7 +33,7 @@ def main():
     if result.returncode != 0:
         print(f"{program.name} exited with code {result.returncode}", file=sys.stderr)
 
-    # The page loads latest.js before the built-in samples, so this run opens first
+    # The page loads latest.js and opens on this run
     name = f"Run: {input_path.name}"
     (DEMO / "latest.js").write_text(
         "// Written by show.py: the last input it ran and what the program printed.\n"
