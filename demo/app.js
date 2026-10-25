@@ -48,17 +48,12 @@
     resize();
   }
 
+  // A run saved by show.py in latest.js
   function loadSample(name) {
     const s = window.SAMPLES[name];
     current = { output: s.output, input: s.input || "" };
-    showName(name);
+    $("run-name").textContent = name;
     load(current.output, current.input);
-  }
-
-  // Name in the top bar, and which entry in the sample list is marked as current
-  function showName(name) {
-    $("sample-name").textContent = name;
-    for (const b of $("sample-menu").querySelectorAll("button")) b.classList.toggle("current", b.textContent === name);
   }
 
   // An input file starts with a line that is just the vehicle count
@@ -79,7 +74,7 @@
         outputName = f.name;
       }
     }
-    if (outputName) showName(outputName);
+    if (outputName) $("run-name").textContent = outputName;
     load(current.output, current.input);
   }
 
@@ -226,7 +221,9 @@
 
     const stepT = steps.filter((s) => s <= minute).pop();
     if (stepT === undefined) {
-      add("Press play, or use the arrows to go one step at a time.");
+      add(model.lines.length
+        ? "Press play, or use the arrows to go one step at a time."
+        : "Nothing loaded yet. Run python3 demo/show.py <input file>, or click Open.");
     } else {
       add(fmtTime(stepT), "when");
       for (const j of model.jobs) {
@@ -269,29 +266,6 @@
 
   // ---------- Controls ----------
 
-  const names = Object.keys(window.SAMPLES || {});
-  let sampleIndex = 0;
-
-  const menu = $("sample-menu");
-  menu.append(...names.map((name, i) => {
-    const li = document.createElement("li");
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = name;
-    b.title = window.SAMPLES[name].description || "";
-    b.addEventListener("click", () => {
-      sampleIndex = i;
-      menu.hidden = true;
-      loadSample(name);
-    });
-    li.append(b);
-    return li;
-  }));
-  $("sample-name").addEventListener("click", () => (menu.hidden = !menu.hidden));
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".samples")) menu.hidden = true;
-  });
-
   $("open").addEventListener("click", () => $("files").click());
   $("files").addEventListener("change", (e) => {
     openFiles([...e.target.files]);
@@ -305,15 +279,10 @@
   $("faster").addEventListener("click", () => setSpeed(speedIndex + 1));
   slider.addEventListener("input", () => (t = Number(slider.value)));
 
-  // Space plays / pauses, arrows step, S cycles through the built-in samples
+  // Space plays / pauses, arrows step
   window.addEventListener("keydown", (e) => {
     if (!model || e.metaKey || e.ctrlKey) return;
-    if (e.key === "Escape") {
-      menu.hidden = true;
-    } else if (e.key === "s" && names.length) {
-      sampleIndex = (sampleIndex + 1) % names.length;
-      loadSample(names[sampleIndex]);
-    } else if (e.key === " ") {
+    if (e.key === " ") {
       e.preventDefault();
       setPlaying(!playing);
     } else if (e.key === "ArrowRight") {
@@ -329,8 +298,10 @@
   // Redraw once Outfit has loaded so the canvas labels use it
   document.fonts.ready.then(resize);
 
-  if (names.length) {
-    loadSample(names[0]);
+  // Open on the last run from show.py, if there is one
+  const runs = Object.keys(window.SAMPLES || {});
+  if (runs.length) {
+    loadSample(runs[0]);
   } else {
     load("", "");
   }

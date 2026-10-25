@@ -11,10 +11,7 @@
   <canvas id="canvas"></canvas>
 
   <header class="bar">
-    <div class="samples">
-      <button type="button" id="sample-name" title="Choose a sample (S for the next one)">--</button>
-      <ul id="sample-menu" hidden></ul>
-    </div>
+    <span id="run-name">No run loaded</span>
     <button type="button" id="open" title="Open main.py output, plus the input file if you have it">Open</button>
     <input type="file" id="files" accept=".txt,text/plain" multiple hidden>
     <span class="sep"></span>
@@ -47,22 +44,8 @@
     </details>
   </aside>
 
-  <!-- latest.js is written by show.py (the last real run); it's missing until show.py has run once -->
+  <!-- latest.js is written by show.py: the input file and what main.py printed -->
   <script src="latest.js"></script>
-  <!-- One script per sample in samples/ -->
-  <script src="samples/01_brief_sample.js"></script>
-  <script src="samples/02_single_axis.js"></script>
-  <script src="samples/03_chaining_all_busy.js"></script>
-  <script src="samples/04_redirect_home.js"></script>
-  <script src="samples/05_simultaneous.js"></script>
-  <script src="samples/07_queue_vs_idle.js"></script>
-  <script src="samples/08_past_midnight.js"></script>
-  <script src="samples/09_job_at_base.js"></script>
-  <script src="samples/10_zero_duration.js"></script>
-  <script src="samples/13_tie_lowest_id.js"></script>
-  <script src="samples/17_three_vehicle_rush.js"></script>
-  <script src="samples/18_four_vehicle_day.js"></script>
-  <script src="samples/19_five_vehicle_busy.js"></script>
 
   <script src="parse.js"></script>
   <script src="timeline.js"></script>
