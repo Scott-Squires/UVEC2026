@@ -124,8 +124,9 @@
   function setPlaying(on) {
     if (on && t >= model.end) t = model.start;
     playing = on;
-    $("icon-play").hidden = on;
-    $("icon-pause").hidden = !on;
+    // SVG elements have no .hidden property, so toggle the attribute itself
+    $("icon-play").toggleAttribute("hidden", on);
+    $("icon-pause").toggleAttribute("hidden", !on);
     lastFrame = null;
   }
 
