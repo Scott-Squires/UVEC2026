@@ -1,4 +1,4 @@
-from job import job
+from job import Job
 
 class Vehicle:
-    queuedJobs: list[job]
+    queuedJobs: list[Job]
