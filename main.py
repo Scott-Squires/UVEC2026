@@ -4,8 +4,8 @@ import sys
 from enum import IntEnum
 
 from input_parser import parse_input
-from job import format_time, format_driving_instruction
-from vehicle import Vehicle
+from job import BASE_X, BASE_Y, format_time, format_driving_instruction
+from vehicle import CAR_STATE, Vehicle
 
 
 class EVENT_PRIORITY(IntEnum):
@@ -76,6 +76,7 @@ def main():
 
 
             case EVENT_PRIORITY.START_DRIVING:
+                car.state = CAR_STATE.TO_JOB
                 print(f"Vehicle {car_id}: {time_24h} Start route to job")
                 car_pos = car.get_position(time)
                 driving_instructions = format_driving_instruction(car_pos[0], car_pos[1], job.position[0], job.position[1])
@@ -84,23 +85,33 @@ def main():
 
             case EVENT_PRIORITY.ARRIVE_JOB:
                 print(f"Vehicle {car_id}: {time_24h} Start job")
+                car.state = CAR_STATE.ON_JOB
+                car.x_coord, car.y_coord = job.position
+                heapq.heappush(timeline, (time + job.completionTime, EVENT_PRIORITY.FINISH_JOB, next(counter), car, job))
 
             case EVENT_PRIORITY.FINISH_JOB:
                 print(f"Vehicle {car_id}: {time_24h} Finish job")
                 # Call function that checks car queue,
                 # if nothing
                 if car.get_queued_jobs_length() == 0:
-                    print(f"Vehicle {car_id}: {time_24h} Start route to base")
-                    # TODO: enqueue in timeline the arrive at base event
+                    if job.position == (BASE_X, BASE_Y):
+                        car.state = CAR_STATE.AT_BASE # job was at base, so it's already home
+                    else:
+                        print(f"Vehicle {car_id}: {time_24h} Start route to base")
+                        driving_instructions = format_driving_instruction(car.x_coord, car.y_coord, BASE_X, BASE_Y)
+                        print(f"Vehicle {car_id}: {time_24h} {driving_instructions}")
+                        car.state = CAR_STATE.TO_BASE
+                        car.left_at = time
+                        homeTime = time + Distance(job.position, (BASE_X, BASE_Y))
+                        heapq.heappush(timeline, (homeTime, EVENT_PRIORITY.ARRIVE_AT_BASE, next(counter), car, job))
                 else:
                     pass
                     # dequeue
 
-
-
-
             case EVENT_PRIORITY.ARRIVE_AT_BASE:
                 print(f"Vehicle {car_id}: {time_24h} Arrive at base")
+                car.state = CAR_STATE.AT_BASE
+                car.x_coord, car.y_coord = BASE_X, BASE_Y
 
 
 
