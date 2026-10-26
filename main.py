@@ -1,3 +1,4 @@
+import sys
 import vehicle
 import job
 import heapq # only for single threaded
@@ -70,8 +71,9 @@ def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline, car_
 
 def main():
     global global_counter
-    #Parse input
-    dayParams = parse_test("./tests/04_redirect_home.txt")
+    #Parse input: path to a test file as argv[1], or this default when run with no args
+    test_file = sys.argv[1] if len(sys.argv) > 1 else "./tests/04_redirect_home.txt"
+    dayParams = parse_test(test_file)
 
     #list of cars
     cars = [vehicle.Vehicle(i) for i in range(dayParams.numVehicles)]
@@ -96,7 +98,6 @@ def main():
             case EVENT_PRIORITY.START_DRIVING:
                 print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to job")
                 car_pos = car.get_position(time)
-                print(car_pos)
                 driving_instructions = format_driving_instruction(car_pos[0], car_pos[1], job.position[0], job.position[1])
                 print(f"Vehicle {car.vehicle_id}: {time_24h} {driving_instructions}")
                 car.lastJobPosition = job.position
@@ -136,13 +137,14 @@ def main():
 def add_car_event_to_timeline(car, timeline, time):
     global global_counter
     job = car.dequeue_job()
+    car.lastJobPosition = car.get_position(time) # capture true position before state flips away from TO_BASE
     car.state = vehicle.CAR_STATE.TO_JOB
     car.currentJobID = job.id
 
     heapq.heappush(timeline, (time, EVENT_PRIORITY.START_DRIVING, global_counter, car, job))
     global_counter += 1
 
-    time_arrive_at_job_site = time + Distance(car.get_position(time), job.position) #is car position good here?
+    time_arrive_at_job_site = time + Distance(car.lastJobPosition, job.position)
     heapq.heappush(timeline, (time_arrive_at_job_site, EVENT_PRIORITY.ARRIVE_JOB, global_counter, car, job))
     global_counter += 1
 
