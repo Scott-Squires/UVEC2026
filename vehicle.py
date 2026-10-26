@@ -22,6 +22,9 @@ class Vehicle:
         self.lastJobPosition = (0,0)
         self.currentJobID = -1
 
+        # Jobs assigned to this car that it hasn't finished yet
+        self.pending_jobs = 0
+
         self.state = CAR_STATE.AT_BASE
 
         # Last place the vehicle stood still (a finished job, or base)

@@ -63,6 +63,7 @@ def ProcessJobForCar (job, car : vehicle, time_car_can_start_job, timeline, car_
     # if not 0, add event and info to car queue
     car.lastAvailablePosition = job.position
     car.nextAvailableTime = time_car_can_start_job + job.completionTime
+    car.pending_jobs += 1
     if car.get_queued_jobs_length() == 0:
         car.enqueue_job(job)
         add_car_event_to_timeline(car, timeline, car_available_time)
@@ -109,9 +110,9 @@ def main():
 
             case EVENT_PRIORITY.FINISH_JOB:
                 print(f"Vehicle {car.vehicle_id}: {time_24h} Finish job")
-                # Call function that checks car queue,
-                # if nothing
-                if car.get_queued_jobs_length() == 0:
+                car.pending_jobs -= 1
+                # only go home if nothing else is already lined up for this car
+                if car.pending_jobs == 0:
                     print(f"Vehicle {car.vehicle_id}: {time_24h} Start route to base")
                     car.state = vehicle.CAR_STATE.TO_BASE
                     car.timeLeavingToBase = time
@@ -121,8 +122,6 @@ def main():
                     print(f"Vehicle {car.vehicle_id}: {time_24h} {driving_instructions}")
                     heapq.heappush(timeline, (baseArrivalTime, EVENT_PRIORITY.ARRIVE_AT_BASE, global_counter, car, job))
                     global_counter += 1
-                else:
-                    add_car_event_to_timeline(car, timeline, time)
 
             case EVENT_PRIORITY.ARRIVE_AT_BASE:
                 if car.currentJobID != job.id:
